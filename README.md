@@ -24,7 +24,7 @@ close-all-windows && shutdown -h now
 ```
 
 ## Install from Repository
-- (ArchLinux AUR)[https://aur.archlinux.org/packages/close-all-windows/]
+- [ArchLinux AUR](https://aur.archlinux.org/packages/close-all-windows/)
 
 ## Manual install
 Super user permission are required for the following steps (`sudo` or `su`).
