@@ -22,8 +22,8 @@ archlinux-package: archlinux-build
 # and gernate package and PKGBUILD file
 	cd $(BUILD_DIR); makepkg -g >> PKGBUILD
 	cd $(BUILD_DIR); makepkg
+	cd $(BUILD_DIR); makepkg --source
 
 # move files to dist folder
 	mkdir $(DIST_DIR)
-	mv $(BUILD_DIR)/*.tar.xz $(DIST_DIR)/
-	mv $(BUILD_DIR)/PKGBUILD $(DIST_DIR)/
+	mv $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
