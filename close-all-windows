@@ -1,0 +1,133 @@
+#!/usr/bin/ruby
+
+class Grace
+	def initialize
+		@log_file         = 'close_open_windows.log'
+		@max_wait         = 5
+		@poll_interval    = 0.5
+		@force            = false
+		@callback_command = ''
+		@debug            = false
+
+		if ARGV[0] === '--force'
+			@force = true
+			ARGV.shift
+		end
+
+		write_to_log "Force: #{@force}"
+
+		@callback_command = ARGV.join(' ').strip;
+
+		write_to_log "callback_command: #{@callback_command}"
+
+		at_exit{write_to_log "Exiting!" }
+	end
+
+	def get_open_windows
+		windows = `wmctrl -lp`.split("\n").map{|line|
+			line_array = line.split(/\s+/)
+			{
+				:win_id => line_array[0],
+				:p_name => `ps -A | grep #{line_array[2]} | rev | cut -d\\  -f 1 | rev`.strip,
+				:unkown => line_array[1],
+				:pid    => line_array[2].to_i,
+				:host   => line_array[3],
+				:title  => line_array[4]
+			}
+		}
+	end
+
+	def close_window(win)
+		command = "wmctrl -ic \"#{win[:win_id]}\""
+
+		write_to_log "closing #{win[:title]} #{command}"
+
+		system(command)
+
+		write_to_log "#{win[:title]} SUCESS: #{$?.success?}"
+	end
+
+	def process_terminated?(pid)
+		begin
+			Process.getpgid( pid )
+			false
+		rescue Errno::ESRCH
+			true
+		end
+	end
+
+	def wait_for_process_to_close(pid)
+		max_polls = (@max_wait/@poll_interval).to_i
+
+		write_to_log("max_polls #{max_polls}")
+
+		wait_thread = Thread.new {
+			max_polls.times do
+				sleep @poll_interval
+
+				if process_terminated?(pid)
+					write_to_log("Process terminated #{pid}")
+					break
+				end
+
+				write_to_log("Process still running #{pid}")
+			end
+		}
+
+		wait_thread.join(@max_wait);
+	end
+
+	def close_window_and_wait(win)
+		close_window(win)
+		wait_for_process_to_close(win[:pid])
+	end
+
+	def write_to_log(message)
+		return unless @debug
+
+		begin
+			open(@log_file, 'a') do |f|
+				f.puts "[#{Time.now}]: #{message}"
+			end
+		rescue
+			warn "Failed to write to log."
+		end
+	end
+
+	def close_all_open_windows_and_wait
+		write_to_log("START")
+
+		close_threads = []
+
+		open_windows = get_open_windows()
+
+		write_to_log("Open Windows:\n#{open_windows}")
+
+		open_windows.each do |win|
+			close_threads << Thread.new {
+				local_win = win
+				write_to_log("CLOSING '#{local_win[:p_name]}'")
+				close_window_and_wait(local_win)
+				write_to_log("CLOSED  '#{local_win[:p_name]}'")
+			}
+
+			write_to_log("thread pushed '#{win[:title]}'")
+		end
+
+		close_threads.each{|t|
+			write_to_log("thread wait join")
+			t.join(@max_wait)
+			write_to_log("thread joined")
+		}
+
+
+
+		write_to_log("DONE")
+		write_to_log("Executing callback: #{@callback_command}")
+
+		Process.spawn(@callback_command) unless @callback_command.empty?
+		write_to_log("TERMINATING")
+	end
+end
+
+Grace.new.close_all_open_windows_and_wait()
