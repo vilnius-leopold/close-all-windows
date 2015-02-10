@@ -16,7 +16,7 @@ close-all-windows
 # optionally run a callback command
 # after all windows are closed
 #
-# e.g. gracefull shutdown
+# e.g. graceful shutdown
 close-all-windows shutdown -h now
 
 # is equal to
@@ -24,5 +24,8 @@ close-all-windows && shutdown -h now
 ```
 
 ## Install
+- install `ruby` and `wmctrl`
+	- Ubuntu: `apt-get install ruby wmctrl`
+	- Arch: `pacman -S ruby wmctrl`
 - copy the `close-all-windows` script into your executable directory e.g. `/usr/bin`
 - make the script executable `chmod +x close-all-windows`
