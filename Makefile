@@ -1,5 +1,7 @@
+PREFIX=/usr/local
+
 all:
+	@echo "nothing to do"
 
 install:
-	cp close-all-windows /usr/bin/close-all-windows
-	chmod +x /usr/bin/close-all-windows
+	install -pm 755 close-all-windows $(DESTDIR)$(PREFIX)/bin
