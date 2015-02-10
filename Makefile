@@ -1,5 +1,6 @@
 PREFIX=/usr/local
 BUILD_DIR=build
+DIST_DIR=dist
 
 all:
 	@echo "nothing to do"
@@ -10,10 +11,19 @@ install:
 
 clean:
 	rm -rf $(BUILD_DIR)/
+	rm -rf $(DIST_DIR)/
 
-prepare-build:
+archlinux-build: clean
 	mkdir $(BUILD_DIR)
-	cp PKGBUILD $(BUILD_DIR)/PKGBUILD
+	cp PKGBUILD.nochecksums $(BUILD_DIR)/PKGBUILD
 
-build: clean prepare-build
+archlinux-package: archlinux-build
+# generage sourcefile checksums
+# and gernate package and PKGBUILD file
+	cd $(BUILD_DIR); makepkg -g >> PKGBUILD
 	cd $(BUILD_DIR); makepkg
+
+# move files to dist folder
+	mkdir $(DIST_DIR)
+	mv $(BUILD_DIR)/*.tar.xz $(DIST_DIR)/
+	mv $(BUILD_DIR)/PKGBUILD $(DIST_DIR)/
