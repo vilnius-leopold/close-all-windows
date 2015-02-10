@@ -23,9 +23,14 @@ close-all-windows shutdown -h now
 close-all-windows && shutdown -h now
 ```
 
-## Install
+## Install from Repository
+- (ArchLinux AUR)[https://aur.archlinux.org/packages/close-all-windows/]
+
+## Manual install
+Super user permission are required for the following steps (`sudo` or `su`).
+
 - install `ruby` and `wmctrl`
 	- Ubuntu: `apt-get install ruby wmctrl`
 	- Arch: `pacman -S ruby wmctrl`
-- copy the `close-all-windows` script into your executable directory e.g. `/usr/bin`
-- make the script executable `chmod +x close-all-windows`
+- copy script into your executable directory `cp close-all-windows /usr/bin/close-all-windows`
+- make the script executable `chmod +x /usr/bin/close-all-windows`
