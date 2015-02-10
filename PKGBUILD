@@ -9,8 +9,9 @@ depends=('ruby' 'wmctrl')
 conflicts=()
 makedepends=()
 source=("$pkgname::https://github.com/vilnius-leopold/$pkgname/archive/$pkgver.tar.gz")
+md5sums=('f9411dff06d699262e4ed1c2741a478c')
 
 package() {
-	cd $pkgname
+	cd $pkgname-$pkgver
 	make DESTDIR="$pkgdir" PREFIX=/usr install
 }
