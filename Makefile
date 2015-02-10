@@ -16,6 +16,7 @@ clean:
 archlinux-build: clean
 	mkdir $(BUILD_DIR)
 	cp PKGBUILD.nochecksums $(BUILD_DIR)/PKGBUILD
+	chmod 755 -R $(BUILD_DIR)/*
 
 archlinux-package: archlinux-build
 # generage sourcefile checksums
@@ -26,4 +27,4 @@ archlinux-package: archlinux-build
 
 # move files to dist folder
 	mkdir $(DIST_DIR)
-	mv $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
+	cp $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
