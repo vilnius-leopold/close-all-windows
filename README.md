@@ -2,7 +2,7 @@ close-all-windows
 =================
 
 Does what it says.
-Gracfully (no force) closes all open X11 windows.
+Gracfully (no force) closes all open [X11](http://www.x.org/) windows.
 (X11 is a popular display server; basis for most Linux window managers.)
 
 ## Usage
