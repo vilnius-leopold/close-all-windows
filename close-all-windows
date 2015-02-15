@@ -1,50 +1,122 @@
 #!/usr/bin/ruby
 
-class Grace
-	def initialize
-		@log_file         = 'close_open_windows.log'
-		@max_wait         = 5
-		@poll_interval    = 0.5
-		@force            = false
-		@callback_command = ''
-		@debug            = false
+require 'optparse'
+require 'ostruct'
 
-		if ARGV[0] === '--force'
-			@force = true
-			ARGV.shift
+class WindowCloser
+	def initialize
+
+		# default settings
+		@options = {
+			:simulate         => false,
+			:force            => false,
+			:ensure_run       => false,
+			:poll_interval    => 0.5,
+			:max_wait         => 5,
+			:callback_command => ''
+		}
+
+		update_options()
+
+		puts "OPTIONS: #{@options.inspect}"
+		puts "=====================\n    SIMULATING\n=====================" if @options[:simulate]
+
+		at_exit{puts "Exiting!" }
+	end
+
+	def update_options
+		opt_parser = OptionParser.new do |opts|
+			opts.banner = "Usage: close-all-windows [options] [command]\n\nOptions:"
+
+			opts.on("--force", "Kill all windows that remain open after",
+			                   "waiting for them to terminate gracefully.\n\n"
+			) do
+				@options[:force] = true
+			end
+
+			opts.on("--simulate", "Test running the script without actually",
+			                   "closing any windows. Usefull for debugging",
+			                   "or for trying out sensitive settings.\n\n"
+			) do
+				@options[:simulate] = true
+			end
+
+			opts.on("--ensure-run", "Ensure that the callback command is run",
+			                        "even if not all windows closed in time.\n\n"
+			) do
+				@options[:ensure_run] = true
+			end
+
+			opts.on("--only [x,y,z]", Array, "Narrow down the windows to be closed by",
+			                                 "comma separated list of PIDs.\n\n"
+			) do |pids|
+				puts "ONLY: #{pids}"
+				@options[:only] = pids.map{|pid| pid.to_i}
+			end
+
+			opts.on("--max-wait val", Integer, "Set the max amount of time in seconds to",
+			                                   "wait for windows to close.",
+			                                   "Default is 5 seconds.\n\n"
+			) do |seconds|
+				@options[:max_wait] = seconds
+			end
+
+			opts.on("--poll-interval val", Float, "Set poll interval in seconds.",
+			                                      "Default is 0.5 seconds.\n\n"
+			) do |seconds|
+				@options[:poll_interval] = seconds
+			end
+
+			opts.on("--except [x,y,z]", Array, "Exclude windows from being closed.",
+			                                   "Comma separated list of PIDs.\n\n"
+			) do |pids|
+				@options[:except] = pids.map{|pid| pid.to_i}
+			end
+
+			opts.on("--help", "Print help text.") do |pids|
+				puts opts
+				puts "\nCommand: optional callback to run after windows closed.\n\n"
+				abort
+			end
 		end
 
-		write_to_log "Force: #{@force}"
 
-		@callback_command = ARGV.join(' ').strip;
-
-		write_to_log "callback_command: #{@callback_command}"
-
-		at_exit{write_to_log "Exiting!" }
+		@options[:callback_command] = opt_parser.order!(ARGV).join(' ').strip
 	end
 
 	def get_open_windows
-		windows = `wmctrl -lp`.split("\n").map{|line|
+		windows = []
+
+		`wmctrl -lp`.split("\n").each do |line|
 			line_array = line.split(/\s+/)
-			{
-				:win_id => line_array[0],
-				:p_name => `ps -A | grep #{line_array[2]} | rev | cut -d\\  -f 1 | rev`.strip,
-				:unkown => line_array[1],
-				:pid    => line_array[2].to_i,
-				:host   => line_array[3],
-				:title  => line_array[4]
+
+			pid = line_array[2].to_i
+			puts "LINE: #{line}"
+
+			next if @options[:except] && @options[:except].include?(pid)
+			next if @options[:only] && ! @options[:only].include?(pid)
+
+
+			windows << {
+				:win_id   => line_array[0],
+				:p_name   => `ps -A | grep #{pid} | rev | cut -d\\  -f 1 | rev`.strip,
+				:app_name => `cat /usr/share/applications/$(ps -p #{pid} -o comm=).desktop | grep Name= | head -n 1 | cut -d= -f 2`.strip,
+				:pid      => pid,
+				:title    => line_array[4]
 			}
-		}
+		end
+
+		return windows
 	end
 
 	def close_window(win)
 		command = "wmctrl -ic \"#{win[:win_id]}\""
 
-		write_to_log "closing #{win[:title]} #{command}"
+		puts "closing #{win[:title]} #{command}"
 
-		system(command)
+		system(command) unless @options[:simulate]
 
-		write_to_log "#{win[:title]} SUCESS: #{$?.success?}"
+		puts "#{win[:title]} SUCESS: #{$?.success?}" unless @options[:simulate]
 	end
 
 	def process_terminated?(pid)
@@ -57,24 +129,24 @@ class Grace
 	end
 
 	def wait_for_process_to_close(pid)
-		max_polls = (@max_wait/@poll_interval).to_i
+		max_polls = (@options[:max_wait]/@options[:poll_interval]).to_i
 
-		write_to_log("max_polls #{max_polls}")
+		puts("max_polls #{max_polls}")
 
 		wait_thread = Thread.new {
 			max_polls.times do
-				sleep @poll_interval
+				sleep @options[:poll_interval]
 
 				if process_terminated?(pid)
-					write_to_log("Process terminated #{pid}")
+					puts("Process terminated #{pid}")
 					break
 				end
 
-				write_to_log("Process still running #{pid}")
+				puts("Process still running #{pid}")
 			end
 		}
 
-		wait_thread.join(@max_wait);
+		wait_thread.join(@options[:max_wait]);
 	end
 
 	def close_window_and_wait(win)
@@ -82,52 +154,56 @@ class Grace
 		wait_for_process_to_close(win[:pid])
 	end
 
-	def write_to_log(message)
-		return unless @debug
-
-		begin
-			open(@log_file, 'a') do |f|
-				f.puts "[#{Time.now}]: #{message}"
-			end
-		rescue
-			warn "Failed to write to log."
+	def all_windows_closed?(windows)
+		windows.each do |win|
+			return false unless process_terminated?(win[:pid])
 		end
+
+		return true;
 	end
 
 	def close_all_open_windows_and_wait
-		write_to_log("START")
+		puts("START")
 
 		close_threads = []
 
 		open_windows = get_open_windows()
 
-		write_to_log("Open Windows:\n#{open_windows}")
+		puts("Open Windows:\n#{open_windows}")
 
 		open_windows.each do |win|
 			close_threads << Thread.new {
 				local_win = win
-				write_to_log("CLOSING '#{local_win[:p_name]}'")
+				puts("CLOSING '#{local_win[:p_name]}'")
 				close_window_and_wait(local_win)
-				write_to_log("CLOSED  '#{local_win[:p_name]}'")
+				puts("CLOSED #{local_win[:app_name]} '#{local_win[:p_name]}'")
 			}
 
-			write_to_log("thread pushed '#{win[:title]}'")
+			puts("thread pushed '#{win[:title]}'")
 		end
 
 		close_threads.each{|t|
-			write_to_log("thread wait join")
-			t.join(@max_wait)
-			write_to_log("thread joined")
+			puts("thread wait join")
+			t.join(@options[:max_wait])
+			puts("thread joined")
 		}
 
+		puts("DONE")
 
+		callback_command = @options[:callback_command]
 
-		write_to_log("DONE")
-		write_to_log("Executing callback: #{@callback_command}")
+		# only run callback if exists
+		# only run callback if all
+		# windows closed in time
+		# or if --ensure-run flag is set
+		if ! callback_command.empty? &&
+		( @options[:ensure_run] || all_windows_closed?(open_windows) )
+			puts("Executing callback: #{callback_command}")
+			Process.spawn(callback_command)
+		end
 
-		Process.spawn(@callback_command) unless @callback_command.empty?
-		write_to_log("TERMINATING")
+		puts("TERMINATING")
 	end
 end
 
-Grace.new.close_all_open_windows_and_wait()
+WindowCloser.new.close_all_open_windows_and_wait()

@@ -28,3 +28,11 @@ archlinux-package: archlinux-build
 # move files to dist folder
 	mkdir $(DIST_DIR)
 	cp $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
+
+archlinux-publish: archlinux-package
+# tag and push commit to github (ensure clean workspace)
+# create Source *-source.tar.gz archive
+# generate md5sum of source tar.gz archive and write to PKGBUILD
+# submit source package to Github via API
+# create AUR package (with source package checksum)
+# submit to AUR via curl post request
