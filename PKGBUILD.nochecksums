@@ -8,9 +8,9 @@ license=('MIT')
 depends=('ruby' 'wmctrl')
 conflicts=()
 makedepends=()
-source=("$pkgname::https://github.com/vilnius-leopold/$pkgname/archive/v$pkgver.tar.gz")
-source=("$pkgname::file:///home/leo/Projects/close-all-windows/dist/$pkgname-$pkgver-source.tar.gz")
+# source=("$pkgname::https://github.com/vilnius-leopold/$pkgname/archive/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver-source.tar.gz")
 package() {
-	cd $pkgname-$pkgver
+	cd $pkgname
 	make DESTDIR="$pkgdir" PREFIX=/usr install
 }

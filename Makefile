@@ -1,6 +1,9 @@
 PREFIX=/usr/local
 BUILD_DIR=build
 DIST_DIR=dist
+VERSION=$(shell cat PKGBUILD* | grep pkgver= | cut -d= -f 2)
+NAME=$(shell cat PKGBUILD* | grep pkgname= | cut -d= -f 2 | cut -d\' -f 2)
+SOURCE_ARCHIVE=$(NAME)-$(VERSION)-source.tar.gz
 
 all:
 	@echo "nothing to do"
@@ -9,13 +12,22 @@ install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	install -pm 755 close-all-windows $(DESTDIR)$(PREFIX)/bin
 
-clean:
-	rm -rf $(BUILD_DIR)/
+clean: clean-build
 	rm -rf $(DIST_DIR)/
 
-archlinux-build: clean
+clean-build:
+	rm -rf $(BUILD_DIR)/
+
+source-package: clean
+	@[[ "$(git status | grep "working directory clean")" != "" ]] || echo "==========================="; echo "WARNING: Changes not committed!"; echo "==========================="
+	cd .. && tar -zcvf $(SOURCE_ARCHIVE) close-all-windows --exclude "close-all-windows/.git"
+	mkdir -p $(DIST_DIR)
+	mv ../$(SOURCE_ARCHIVE) $(DIST_DIR)/$(SOURCE_ARCHIVE)
+
+archlinux-build: source-package clean-build
 	mkdir $(BUILD_DIR)
 	cp PKGBUILD.nochecksums $(BUILD_DIR)/PKGBUILD
+	cp $(DIST_DIR)/$(SOURCE_ARCHIVE) $(BUILD_DIR)/$(SOURCE_ARCHIVE)
 	chmod 755 -R $(BUILD_DIR)/*
 
 archlinux-package: archlinux-build
@@ -26,7 +38,7 @@ archlinux-package: archlinux-build
 	cd $(BUILD_DIR); makepkg --source
 
 # move files to dist folder
-	mkdir $(DIST_DIR)
+	mkdir -p $(DIST_DIR)
 	cp $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
 
 archlinux-publish: archlinux-package
