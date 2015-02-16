@@ -9,6 +9,7 @@ Gracfully (no force) closes all open [X11](http://www.x.org/) windows.
 
 _NOTE_: The script will not execute successfully if you run it from within a window application e.g. a terminal window, because the window running the script will be closed by the script, thus interrupting the script. Run this script from within your window manager or in a background process.
 
+### CLI
 ```bash
 # plain usage
 close-all-windows
@@ -22,6 +23,9 @@ close-all-windows shutdown -h now
 # is equal to
 close-all-windows && shutdown -h now
 ```
+
+### GUI
+[close-all-windows-dialog](https://github.com/vilnius-leopold/close-all-windows-dialog) is a very simple GUI front-end for this script.
 
 ## Install from Repository
 - [ArchLinux AUR](https://aur.archlinux.org/packages/close-all-windows/)
