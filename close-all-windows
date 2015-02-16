@@ -3,7 +3,7 @@
 require 'optparse'
 require 'ostruct'
 
-class WindowCloser
+class X11WindowCloser
 	def initialize
 
 		# default settings
@@ -206,4 +206,4 @@ class WindowCloser
 	end
 end
 
-WindowCloser.new.close_all_open_windows_and_wait()
+X11WindowCloser.new.close_all_open_windows_and_wait()
