@@ -1,0 +1,3 @@
+- steam --> xdotool find steam window and send Alt+F4
+- skype --> Ctrl+Q, but only on main window, thus first raise main window and then close, if not visible
+- i3-wm --> xdotool send Shift+Alt+Q
