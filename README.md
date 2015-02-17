@@ -14,13 +14,10 @@ _NOTE_: The script will not execute successfully if you run it from within a win
 # plain usage
 close-all-windows
 
-# optionally run a callback command
-# after all windows are closed
-#
-# e.g. graceful shutdown
-close-all-windows shutdown -h now
-
-# is equal to
+# run a callback command
+# after all windows closed
+# successfully
+# e.g. gracefull shutdown
 close-all-windows && shutdown -h now
 ```
 
