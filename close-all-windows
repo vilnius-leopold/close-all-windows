@@ -3,6 +3,116 @@
 require 'optparse'
 require 'ostruct'
 
+module ConfParser
+	PARSERS = {
+		"force"         => ->(value){ value == 'true' },
+		"preserve-env"  => ->(value){ value == 'true' },
+		"poll-interval" => ->(value){ value.to_f },
+		"max-wait"      => ->(value){ value.to_i }
+	}
+
+	def self.parse_key_value(key,value)
+		parser = PARSERS[key]
+
+		return parser.call(value) if parser
+
+		return value
+	end
+
+	def self.parse_file(path)
+		self.parse(File.open(path).read)
+	end
+
+	def self.parse(conf_string)
+		lines = conf_string.split("\n")
+
+
+		targets = {}
+
+		current_target = nil
+
+		lines.each do |line|
+			# ignore comments and empty lines
+			next if line =~ /(^\s*#|^\s*$)/
+
+			# puts "LINE: #{line}"
+
+			# target match definition
+			if line =~ /^\[/ && line =~ /\]$/
+				# puts "Found target: #{line}"
+
+
+				line.strip!
+
+				if line == '[global]'
+					target = 'global'
+				else
+					target = []
+
+					until line.empty? do
+						# matches = []
+						pattern = /\[([\w\-]+)=/
+						matches = pattern.match(line)
+						line.slice!(pattern) # make sure to remove it
+
+						match_condition = {
+							:attribute    => matches[1],
+							:pattern_type => nil,
+							:pattern      => nil
+						}
+
+						# puts "SLICE 1: #{line}"
+
+						if line.start_with?('/')
+							pattern_type = :regex
+							pattern = /\/(.*)\/\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						elsif line.start_with?('"')
+							pattern_type = :glob
+							pattern = /"(.*)"\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						elsif line.start_with?("'")
+							pattern_type = :string
+							pattern = /'(.*)'\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						else
+							raise "Unable to parse pattern for #{attribute}"
+						end
+
+						match_condition[:pattern_type] = pattern_type
+						match_condition[:pattern]      = matches[1]
+
+						target.push(match_condition)
+					end
+				end
+
+				current_target = target
+				targets[current_target] = {}
+
+				puts "TARGET: #{current_target}"
+
+			# key/value settings
+			elsif matches = /^(\s{3,}|\t)([\w\-]+):\s*(.+)\s*$/.match(line)
+				# puts "Found key value: #{line}\n#{matches}"
+
+				raise "Missing target!" unless current_target
+
+				key   = matches[2]
+				value = self.parse_key_value(key,matches[3])
+
+				puts "        KEY: #{key}, VALUE: #{value}"
+
+				targets[current_target][key] = value
+			else
+				raise "Unable to parse line!\n#{line}"
+			end
+		end
+	end
+end
+
 class X11Window
 	attr_reader :id, :process_name, :app_name, :pid, :title
 
