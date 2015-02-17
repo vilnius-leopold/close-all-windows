@@ -3,25 +3,75 @@
 require 'optparse'
 require 'ostruct'
 
+class X11Window
+	attr_reader :id, :process_name, :app_name, :pid, :title
+
+	def initialize(options)
+		options.each { |k,v| instance_variable_set("@#{k}", v) }
+
+		@closed = false
+	end
+
+	def closed?
+		return true if @closed
+
+		begin
+			Process.getpgid(@pid)
+			false
+		rescue Errno::ESRCH
+			@closed = true
+			true
+		end
+	end
+
+	def kill
+		system("kill -9 #{@pid}")
+		puts "Kill result: #{$?} #{@app_name}"
+	end
+
+	def close
+		system("wmctrl -ic \"#{@id}\"")
+		puts "Close result: #{$?} #{@app_name}"
+	end
+
+	def open?
+		return ! @closed
+	end
+
+	def wait_until_close
+		max_polls = (@max_wait/@poll_interval).to_i
+
+		wait_thread = Thread.new {
+			max_polls.times do
+				sleep @poll_interval
+
+				if closed?
+					break
+				end
+			end
+		}
+
+		wait_thread.join(@max_wait);
+		puts "Stop wait #{@pid} #{@app_name}"
+	end
+end
+
 class X11WindowCloser
 	def initialize
-
 		# default settings
 		@options = {
 			:simulate         => false,
 			:force            => false,
-			:ensure_run       => false,
 			:poll_interval    => 0.5,
-			:max_wait         => 5,
-			:callback_command => ''
+			:max_wait         => 5
 		}
 
+		# get cli options
 		update_options()
 
-		puts "OPTIONS: #{@options.inspect}"
-		puts "=====================\n    SIMULATING\n=====================" if @options[:simulate]
+		puts @options
 
-		at_exit{puts "Exiting!" }
+		puts "=====================\n    SIMULATING\n=====================" if @options[:simulate]
 	end
 
 	def update_options
@@ -39,12 +89,6 @@ class X11WindowCloser
 			                   "or for trying out sensitive settings.\n\n"
 			) do
 				@options[:simulate] = true
-			end
-
-			opts.on("--ensure-run", "Ensure that the callback command is run",
-			                        "even if not all windows closed in time.\n\n"
-			) do
-				@options[:ensure_run] = true
 			end
 
 			opts.on("--only [x,y,z]", Array, "Narrow down the windows to be closed by",
@@ -75,13 +119,11 @@ class X11WindowCloser
 
 			opts.on("--help", "Print help text.") do |pids|
 				puts opts
-				puts "\nCommand: optional callback to run after windows closed.\n\n"
 				abort
 			end
 		end
 
-
-		@options[:callback_command] = opt_parser.order!(ARGV).join(' ').strip
+		opt_parser.order!(ARGV)
 	end
 
 	def get_open_windows
@@ -90,120 +132,118 @@ class X11WindowCloser
 		`wmctrl -lp`.split("\n").each do |line|
 			line_array = line.split(/\s+/)
 
-			pid = line_array[2].to_i
-			puts "LINE: #{line}"
+			id    = line_array.shift      # 0
+			line_array.shift              # 1 remove unkown element
+			pid   = line_array.shift.to_i # 2
+			line_array.shift              # 3 remove unkown element
+			title = line_array.join(' ')  # 4 join the rest
 
+			# for some windows
+			# wmctrl can't determine
+			# the window id or pid
+			# e.g. steam
+			# check `ps -A | grep steam`
+			# possible steam client runs
+			# outside of window manager
+			# possibly solveable via specific
+			# application extensions
+			# or other window lookup/polling method
+			next if pid == 0
+
+			# filter windows
 			next if @options[:except] && @options[:except].include?(pid)
 			next if @options[:only] && ! @options[:only].include?(pid)
 
 
-			windows << {
-				:win_id   => line_array[0],
-				:p_name   => `ps -A | grep #{pid} | rev | cut -d\\  -f 1 | rev`.strip,
-				:app_name => `cat /usr/share/applications/$(ps -p #{pid} -o comm=).desktop | grep Name= | head -n 1 | cut -d= -f 2`.strip,
-				:pid      => pid,
-				:title    => line_array[4]
+			process_name = ''
+			app_name     = ''
+
+			process_name = `ps -fwwp #{pid} | tail -n 1`.split(" ")[7] unless pid == 0
+
+			if process_name != ''
+				desktop_file = "/usr/share/applications/#{process_name}.desktop"
+				app_name     = `cat #{desktop_file} | grep Name= | head -n 1 | cut -d= -f 2`.strip if File.exists?(desktop_file)
+			end
+
+			window_options = {
+				:id            => id,
+				:process_name  => process_name,
+				:app_name      => app_name,
+				:pid           => pid,
+				:title         => title,
+				:poll_interval => @options[:poll_interval],
+				:max_wait      => @options[:max_wait]
 			}
+
+			puts window_options
+
+			windows << X11Window.new(window_options)
 		end
 
 		return windows
 	end
 
-	def close_window(win)
-		command = "wmctrl -ic \"#{win[:win_id]}\""
-
-		puts "closing #{win[:title]} #{command}"
-
-		system(command) unless @options[:simulate]
-
-		puts "#{win[:title]} SUCESS: #{$?.success?}" unless @options[:simulate]
-	end
-
-	def process_terminated?(pid)
-		begin
-			Process.getpgid( pid )
-			false
-		rescue Errno::ESRCH
-			true
-		end
-	end
-
-	def wait_for_process_to_close(pid)
-		max_polls = (@options[:max_wait]/@options[:poll_interval]).to_i
-
-		puts("max_polls #{max_polls}")
-
-		wait_thread = Thread.new {
-			max_polls.times do
-				sleep @options[:poll_interval]
-
-				if process_terminated?(pid)
-					puts("Process terminated #{pid}")
-					break
-				end
-
-				puts("Process still running #{pid}")
-			end
-		}
-
-		wait_thread.join(@options[:max_wait]);
-	end
-
-	def close_window_and_wait(win)
-		close_window(win)
-		wait_for_process_to_close(win[:pid])
-	end
-
 	def all_windows_closed?(windows)
 		windows.each do |win|
-			return false unless process_terminated?(win[:pid])
+			return false unless win.closed?
 		end
 
 		return true;
 	end
 
-	def close_all_open_windows_and_wait
-		puts("START")
-
+	# takes array of X11Window objects
+	# and a block that tries to close
+	# the window
+	#
+	def close_windows_and_wait(windows, &block)
 		close_threads = []
 
-		open_windows = get_open_windows()
+		windows.each do |win|
+			next if win.closed?
 
-		puts("Open Windows:\n#{open_windows}")
-
-		open_windows.each do |win|
 			close_threads << Thread.new {
-				local_win = win
-				puts("CLOSING '#{local_win[:p_name]}'")
-				close_window_and_wait(local_win)
-				puts("CLOSED #{local_win[:app_name]} '#{local_win[:p_name]}'")
+				# block passes in the close command
+				block.call(win) unless @options[:simulate]
+				win.wait_until_close
+				puts "Closed (#{win.pid}) #{win.process_name}: #{win.app_name}"
 			}
-
-			puts("thread pushed '#{win[:title]}'")
 		end
 
 		close_threads.each{|t|
-			puts("thread wait join")
 			t.join(@options[:max_wait])
-			puts("thread joined")
 		}
+	end
 
-		puts("DONE")
+	def close_all_windows
+		open_windows = get_open_windows()
 
-		callback_command = @options[:callback_command]
+		# load config
+		# with custom close command
 
-		# only run callback if exists
-		# only run callback if all
-		# windows closed in time
-		# or if --ensure-run flag is set
-		if ! callback_command.empty? &&
-		( @options[:ensure_run] || all_windows_closed?(open_windows) )
-			puts("Executing callback: #{callback_command}")
-			Process.spawn(callback_command)
+		# gently close windows
+		puts "Closing"
+		close_windows_and_wait(open_windows) do |win|
+			# run custom close command here
+			puts "Closing #{win.pid} #{win.app_name}"
+			win.close
 		end
 
-		puts("TERMINATING")
+		# kill remaining windows
+		if @options[:force]
+			puts "Killing"
+			close_windows_and_wait(open_windows) do |win|
+				puts "Killing #{win.pid} #{win.app_name}"
+				win.kill
+			end
+		end
+
+		if all_windows_closed?(open_windows)
+			exit(0)
+		end
+
+		warn "Closing all windows failed."
+		exit(1)
 	end
 end
 
-X11WindowCloser.new.close_all_open_windows_and_wait()
+X11WindowCloser.new.close_all_windows()
