@@ -45,6 +45,7 @@ Super user permission are required for the following steps (`sudo` or `su`).
 ## Issues
 - Some windows are not (yet) recognized, e.g. the steam client
 - Some windows won't close entirely but only go into the background e.g. skype
+- Some window managers (e.g. i3-wm) don't react to `wmctrl -c`
 
 ## Feature requests
 So the tool works perfectly for my use case. But possibly you'll need something extra.
