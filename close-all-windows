@@ -76,8 +76,6 @@ class X11WindowCloser
 
 	def update_options
 		opt_parser = OptionParser.new do |opts|
-			opts.banner = "Usage: close-all-windows [options] [command]\n\nOptions:"
-
 			opts.on("--force", "Kill all windows that remain open after",
 			                   "waiting for them to terminate gracefully.\n\n"
 			) do
