@@ -150,7 +150,10 @@ class X11Window
 		system({
 			"WINDOW_ID"  => @id.to_s,
 			"WINDOW_PID" => @pid.to_s
-		}, @close_command)
+		}, @close_command,
+		{
+			:unsetenv_others => ! @preserve_env
+		})
 	end
 
 	def open?
@@ -402,7 +405,7 @@ class X11WindowCloser
 				:title           => title,
 				:poll_interval   => @options[:poll_interval],
 				:max_wait        => @options[:max_wait],
-				:shell           => '/bin/bash',
+				:preserve_env    => false,
 				:close_command   => 'wmctrl -ic $WINDOW_ID'
 			}
 
