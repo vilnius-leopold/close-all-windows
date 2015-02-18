@@ -253,7 +253,12 @@ class X11WindowCloser
 			end
 		end
 
-		opt_parser.order!(ARGV)
+		begin
+			opt_parser.order!(ARGV)
+		rescue Exception => e
+			puts_debug "PARSE ERROR", e
+			abort("Invalid commandline options!")
+		end
 	end
 
 	def load_config_options()
