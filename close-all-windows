@@ -318,7 +318,7 @@ class X11WindowCloser
 		end
 
 		close_threads.each{|t|
-			t.join(@options[:max_wait])
+			t.join()
 		}
 	end
 
