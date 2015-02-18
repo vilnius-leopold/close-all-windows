@@ -162,7 +162,6 @@ class X11Window
 		}
 
 		wait_thread.join(@max_wait);
-		puts "Stop wait #{@pid} #{@app_name}"
 	end
 end
 
@@ -173,15 +172,20 @@ class X11WindowCloser
 			:simulate         => false,
 			:force            => false,
 			:poll_interval    => 0.5,
-			:max_wait         => 5
+			:max_wait         => 5,
+			:verbose          => false
 		}
 
 		# get cli options
 		update_options()
 
-		puts @options
+		puts_debug "OPTIONS:", @options
 
 		puts "=====================\n    SIMULATING\n=====================" if @options[:simulate]
+	end
+
+	def puts_debug(*args)
+		puts *args if @options[:verbose]
 	end
 
 	def update_options
@@ -202,7 +206,6 @@ class X11WindowCloser
 			opts.on("--only [x,y,z]", Array, "Narrow down the windows to be closed by",
 			                                 "comma separated list of PIDs.\n\n"
 			) do |pids|
-				puts "ONLY: #{pids}"
 				@options[:only] = pids.map{|pid| pid.to_i}
 			end
 
@@ -217,6 +220,10 @@ class X11WindowCloser
 			                                      "Default is 0.5 seconds.\n\n"
 			) do |seconds|
 				@options[:poll_interval] = seconds
+			end
+
+			opts.on("--verbose", "Print debug information.") do
+				@options[:verbose] = true
 			end
 
 			opts.on("--except [x,y,z]", Array, "Exclude windows from being closed.",
@@ -236,6 +243,8 @@ class X11WindowCloser
 
 	def get_open_windows
 		windows = []
+
+		puts_debug "WINDOWS:"
 
 		`wmctrl -lp`.split("\n").each do |line|
 			line_array = line.split(/\s+/)
@@ -283,7 +292,7 @@ class X11WindowCloser
 				:max_wait      => @options[:max_wait]
 			}
 
-			puts window_options
+			puts_debug window_options
 
 			windows << X11Window.new(window_options)
 		end
@@ -311,9 +320,15 @@ class X11WindowCloser
 
 			close_threads << Thread.new {
 				# block passes in the close command
+				puts_debug "Closing (#{win.pid}) #{win.process_name}: #{win.app_name}"
 				block.call(win) unless @options[:simulate]
 				win.wait_until_close
-				puts "Closed (#{win.pid}) #{win.process_name}: #{win.app_name}"
+
+				if win.closed?
+					puts_debug "CLOSED  (#{win.pid}) #{win.process_name}: #{win.app_name}"
+				else
+					puts_debug "FAILED  close (#{win.pid}) #{win.process_name}: #{win.app_name}"
+				end
 			}
 		end
 
@@ -329,18 +344,16 @@ class X11WindowCloser
 		# with custom close command
 
 		# gently close windows
-		puts "Closing"
 		close_windows_and_wait(open_windows) do |win|
 			# run custom close command here
-			puts "Closing #{win.pid} #{win.app_name}"
 			win.close
 		end
 
 		# kill remaining windows
 		if @options[:force]
-			puts "Killing"
+			puts_debug "Trying to kill now"
+
 			close_windows_and_wait(open_windows) do |win|
-				puts "Killing #{win.pid} #{win.app_name}"
 				win.kill
 			end
 		end
