@@ -8,7 +8,6 @@ module ConfParser
 
 	PARSERS = {
 		:force         => ->(value){ value == 'true' },
-		:preserve_env  => ->(value){ value == 'true' },
 		:poll_interval => ->(value){ value.to_f },
 		:max_wait      => ->(value){ value.to_i }
 	}
@@ -150,10 +149,7 @@ class X11Window
 		system({
 			"WINDOW_ID"  => @id.to_s,
 			"WINDOW_PID" => @pid.to_s
-		}, @close_command,
-		{
-			:unsetenv_others => ! @preserve_env
-		})
+		}, @close_command)
 	end
 
 	def open?
@@ -267,8 +263,8 @@ class X11WindowCloser
 	def load_config_options()
 		config_options = nil
 
-		local_conf_path     = '~/.config/close-all-windows/close-all-windows.conf'
-		alt_local_conf_path = '~/.close-all-windows.conf'
+		local_conf_path     = ENV['HOME'] + '/.config/close-all-windows/close-all-windows.conf'
+		alt_local_conf_path = ENV['HOME'] + '~/.close-all-windows.conf'
 		system_conf_path    = '/etc/close-all-windows.conf'
 
 		local_conf     = File.exists?(local_conf_path) ? local_conf_path : nil
@@ -399,7 +395,6 @@ class X11WindowCloser
 				:title           => title,
 				:poll_interval   => @options[:poll_interval],
 				:max_wait        => @options[:max_wait],
-				:preserve_env    => false,
 				:close_command   => 'wmctrl -ic $WINDOW_ID'
 			}
 
