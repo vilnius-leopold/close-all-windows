@@ -360,13 +360,9 @@ class X11WindowCloser
 			next if @options[:except] && @options[:except].include?(pid)
 			next if @options[:only] && ! @options[:only].include?(pid)
 
-
 			process_name    = ''
 			process_command = ''
 			app_name        = ''
-
-
-			process_name = `ps -fwwp #{pid} | tail -n 1`.split(" ")[7] unless pid == 0
 
 			# ISSUE:
 			# ps and cat /proc only shows
