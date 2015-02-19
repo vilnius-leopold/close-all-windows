@@ -24,6 +24,13 @@ close-all-windows --help
 close-all-windows && shutdown -h now
 ```
 
+### Config file
+The config file allows you to customize the close behaviour and cover edge cases. View [close-all-windows.conf](close-all-windows.conf) for more informations.
+
+Copy [close-all-windows.conf](close-all-windows.conf) to `~/.config/close-all-windows/` directory to use it.
+
+If installed via package, a sample config file is install under `/usr/share/close-all-windows/`.
+
 ### GUI
 [close-all-windows-dialog](https://github.com/vilnius-leopold/close-all-windows-dialog) is a very simple GUI front-end for this script.
 
@@ -40,7 +47,7 @@ Super user permission are required for the following steps (`sudo` or `su`).
 - make the script executable `chmod +x /usr/bin/close-all-windows`
 
 ## ToDo
-- Alternative close commands hooks for matching window
+- Improve edge case coverage
 
 ## Issues
 - Some windows are not (yet) recognized, e.g. the steam client
