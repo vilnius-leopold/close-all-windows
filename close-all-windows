@@ -448,9 +448,6 @@ class X11WindowCloser
 	def close_all_windows
 		open_windows = get_open_windows()
 
-		# load config
-		# with custom close command
-
 		# gently close windows
 		close_windows_and_wait(open_windows) do |win|
 			# run custom close command here
@@ -458,12 +455,8 @@ class X11WindowCloser
 		end
 
 		# kill remaining windows
-		if @options[:force]
-			puts_debug "Trying to kill now"
-
-			close_windows_and_wait(open_windows) do |win|
-				win.kill
-			end
+		close_windows_and_wait(open_windows) do |win|
+			win.kill if win.force || @options[:force]
 		end
 
 		if all_windows_closed?(open_windows)

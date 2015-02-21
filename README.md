@@ -48,6 +48,10 @@ Super user permission are required for the following steps (`sudo` or `su`).
 
 ## ToDo
 - Improve edge case coverage
+- gem package
+- use `xev` (or c native xlib) for (close) event handling
+- try bamf for window/app discovery
+- try indicator-appmenu/{gtk,qt}-appmenu for triggering menu actions
 
 ## Issues
 - Some windows are not (yet) recognized, e.g. the steam client
