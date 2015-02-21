@@ -3,6 +3,123 @@
 require 'optparse'
 require 'ostruct'
 
+module ConfParser
+	DEBUG = false
+
+	PARSERS = {
+		:force         => ->(value){ value == 'true' },
+		:poll_interval => ->(value){ value.to_f },
+		:max_wait      => ->(value){ value.to_i }
+	}
+
+	def self.parse_key_value(key,value)
+		parser = PARSERS[key]
+
+		return parser.call(value) if parser
+
+		return value
+	end
+
+	def self.parse_file(path)
+		self.parse(File.open(path).read)
+	end
+
+	def self.parse(conf_string)
+		lines = conf_string.split("\n")
+
+
+		targets = {}
+
+		current_target = nil
+
+		lines.each do |line|
+			# ignore comments and empty lines
+			next if line =~ /(^\s*#|^\s*$)/
+
+			# target match definition
+			if line =~ /^\[/ && line =~ /\]$/
+				line.strip!
+
+				if line == '[global]'
+					target = 'global'
+				else
+					target = []
+
+					until line.empty? do
+						# matches = []
+						pattern = /\[([\w\-]+)=/
+						matches = pattern.match(line)
+						line.slice!(pattern) # make sure to remove it
+
+						match_condition = {
+							:attribute    => matches[1].gsub('-','_').to_sym,
+							:pattern_type => nil,
+							:pattern      => nil
+						}
+
+						if line.start_with?('/')
+							pattern_type = :regex
+							pattern = /\/(.*)\/\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						elsif line.start_with?('"')
+							pattern_type = :glob
+							pattern = /"(.*)"\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						elsif line.start_with?("'")
+							pattern_type = :string
+							pattern = /'(.*)'\]/
+							matches = pattern.match(line)
+							line.slice!(pattern)
+						else
+							raise "Unable to parse pattern for #{attribute}"
+						end
+
+						match_condition[:pattern_type] = pattern_type
+						match_condition[:pattern]      = matches[1]
+
+						target.push(match_condition)
+					end
+				end
+
+				current_target = target
+				targets[current_target] = {}
+
+				puts "TARGET: #{current_target}" if DEBUG
+
+			# key/value settings
+			elsif matches = /^(\s{3,}|\t)([\w\-]+):\s*(.+)\s*$/.match(line)
+				# puts "Found key value: #{line}\n#{matches}"
+
+				raise "Missing target!" unless current_target
+
+				key   = matches[2].gsub('-','_').to_sym
+				value = self.parse_key_value(key,matches[3])
+
+				puts "        KEY: #{key}, VALUE: #{value}" if DEBUG
+
+				targets[current_target][key] = value
+			else
+				raise "Unable to parse line!\n#{line}"
+			end
+		end
+
+		conf_options = {
+			:global  => {},
+			:targets => {}
+		}
+
+		if targets.has_key?('global')
+			conf_options[:global] = targets.delete('global')
+		end
+
+		conf_options[:targets] = targets
+
+		return conf_options
+	end
+end
+
 class X11Window
 	attr_reader :id, :process_name, :app_name, :pid, :title
 
@@ -26,12 +143,13 @@ class X11Window
 
 	def kill
 		system("kill -9 #{@pid}")
-		puts "Kill result: #{$?} #{@app_name}"
 	end
 
 	def close
-		system("wmctrl -ic \"#{@id}\"")
-		puts "Close result: #{$?} #{@app_name}"
+		system({
+			"WINDOW_ID"  => @id.to_s,
+			"WINDOW_PID" => @pid.to_s
+		}, @close_command)
 	end
 
 	def open?
@@ -52,7 +170,6 @@ class X11Window
 		}
 
 		wait_thread.join(@max_wait);
-		puts "Stop wait #{@pid} #{@app_name}"
 	end
 end
 
@@ -63,15 +180,22 @@ class X11WindowCloser
 			:simulate         => false,
 			:force            => false,
 			:poll_interval    => 0.5,
-			:max_wait         => 5
+			:max_wait         => 5,
+			:verbose          => false
 		}
 
 		# get cli options
 		update_options()
-
-		puts @options
-
 		puts "=====================\n    SIMULATING\n=====================" if @options[:simulate]
+		puts_debug "CLI OPTIONS:", @options
+
+		# conf file options
+		@config_options = load_config_options()
+		puts_debug "CONFIG OPTIONS:", @config_options
+	end
+
+	def puts_debug(*args)
+		puts *args if @options[:verbose]
 	end
 
 	def update_options
@@ -92,7 +216,6 @@ class X11WindowCloser
 			opts.on("--only [x,y,z]", Array, "Narrow down the windows to be closed by",
 			                                 "comma separated list of PIDs.\n\n"
 			) do |pids|
-				puts "ONLY: #{pids}"
 				@options[:only] = pids.map{|pid| pid.to_i}
 			end
 
@@ -109,6 +232,14 @@ class X11WindowCloser
 				@options[:poll_interval] = seconds
 			end
 
+			opts.on("--verbose", "Print debug information.") do
+				@options[:verbose] = true
+			end
+
+			opts.on("--use-config path", String, "Path to config file.") do |path|
+				@options[:use_config] = path
+			end
+
 			opts.on("--except [x,y,z]", Array, "Exclude windows from being closed.",
 			                                   "Comma separated list of PIDs.\n\n"
 			) do |pids|
@@ -121,16 +252,89 @@ class X11WindowCloser
 			end
 		end
 
-		opt_parser.order!(ARGV)
+		begin
+			opt_parser.order!(ARGV)
+		rescue Exception => e
+			puts_debug "PARSE ERROR", e
+			abort("Invalid commandline options!")
+		end
+	end
+
+	def load_config_options()
+		config_options = nil
+
+		local_conf_path     = ENV['HOME'] + '/.config/close-all-windows/close-all-windows.conf'
+		alt_local_conf_path = ENV['HOME'] + '~/.close-all-windows.conf'
+		system_conf_path    = '/etc/close-all-windows.conf'
+
+		local_conf     = File.exists?(local_conf_path) ? local_conf_path : nil
+		alt_local_conf = File.exists?(alt_local_conf_path) ? alt_local_conf_path : nil
+		system_conf    = File.exists?(system_conf_path) ? system_conf_path : nil
+
+		conf_path =
+			@options[:use_config] ||
+			local_conf ||
+			alt_local_conf ||
+			system_conf
+
+		begin
+			config_options = ConfParser.parse_file(conf_path) if conf_path
+		rescue Exception => e
+			puts_debug("PARSE ERROR:", e)
+			abort("Failed to parse config file at:\n #{conf_path}")
+		end
+
+		return config_options
+	end
+
+	def match_pattern(match_obj, string)
+		pattern_type = match_obj[:pattern_type]
+		pattern      = match_obj[:pattern]
+
+		case pattern_type
+		when :glob
+			File.fnmatch(pattern, string)
+		when :regex
+			Regexp.new(pattern).match(string)
+		when :string
+			pattern == string
+		else
+			raise "Unkown pattern type '#{pattern_type}'"
+		end
+	end
+
+	def target_matches_window?(target, window_options)
+		target.each do |condition|
+			window_attribute_value = window_options[condition[:attribute]]
+
+			return false unless match_pattern(condition, window_attribute_value)
+		end
+		puts_debug "Found match: #{target} #{window_options}"
+		return true
+	end
+
+	def merge_config_options(window_options)
+		window_options = window_options.merge(@config_options[:global])
+
+		@config_options[:targets].each do |target, window_conf_options|
+			if target_matches_window?(target, window_options)
+				window_options = window_options.merge(window_conf_options)
+				break
+			end
+		end
+
+		return window_options
 	end
 
 	def get_open_windows
 		windows = []
 
+		puts_debug "WINDOWS:"
+
 		`wmctrl -lp`.split("\n").each do |line|
 			line_array = line.split(/\s+/)
 
-			id    = line_array.shift      # 0
+			id    = line_array.shift.to_i(16) # from hex to int
 			line_array.shift              # 1 remove unkown element
 			pid   = line_array.shift.to_i # 2
 			line_array.shift              # 3 remove unkown element
@@ -152,11 +356,30 @@ class X11WindowCloser
 			next if @options[:except] && @options[:except].include?(pid)
 			next if @options[:only] && ! @options[:only].include?(pid)
 
+			process_name    = ''
+			process_command = ''
+			app_name        = ''
 
-			process_name = ''
-			app_name     = ''
+			# ISSUE:
+			# ps and cat /proc only shows
+			# max 15 character long process_name
+			# anything longer than that
+			# is turncated thus we can't rely on it
+			#
+			# we will have to try to extract
+			# the process_name from the command
+			# beware, the process_name can have
+			# a interpreter path preceeding
+			# and might also be part
+			# of a script path
+			process_command = `ps --no-headers -p #{pid} -o cmd`.strip
+			process_name    = `ps --no-headers -p #{pid} -o comm`.strip
 
-			process_name = `ps -fwwp #{pid} | tail -n 1`.split(" ")[7] unless pid == 0
+			if process_name != '' && process_command != ''
+				pattern = "^.*(#{process_name}[a-z0-9\\-]*)(\\s+|$)"
+				process_name_regex = Regexp.new(pattern)
+				process_name       = process_name_regex.match(process_command)[1]
+			end
 
 			if process_name != ''
 				desktop_file = "/usr/share/applications/#{process_name}.desktop"
@@ -164,16 +387,20 @@ class X11WindowCloser
 			end
 
 			window_options = {
-				:id            => id,
-				:process_name  => process_name,
-				:app_name      => app_name,
-				:pid           => pid,
-				:title         => title,
-				:poll_interval => @options[:poll_interval],
-				:max_wait      => @options[:max_wait]
+				:id              => id,
+				:process_name    => process_name,
+				:process_command => process_command,
+				:app_name        => app_name,
+				:pid             => pid,
+				:title           => title,
+				:poll_interval   => @options[:poll_interval],
+				:max_wait        => @options[:max_wait],
+				:close_command   => 'wmctrl -ic $WINDOW_ID'
 			}
 
-			puts window_options
+			window_options = merge_config_options(window_options)
+
+			puts_debug window_options
 
 			windows << X11Window.new(window_options)
 		end
@@ -201,38 +428,35 @@ class X11WindowCloser
 
 			close_threads << Thread.new {
 				# block passes in the close command
+				puts_debug "Closing (#{win.pid}) #{win.process_name}: #{win.app_name}"
 				block.call(win) unless @options[:simulate]
 				win.wait_until_close
-				puts "Closed (#{win.pid}) #{win.process_name}: #{win.app_name}"
+
+				if win.closed?
+					puts_debug "CLOSED  (#{win.pid}) #{win.process_name}: #{win.app_name}"
+				else
+					puts_debug "FAILED  close (#{win.pid}) #{win.process_name}: #{win.app_name}"
+				end
 			}
 		end
 
 		close_threads.each{|t|
-			t.join(@options[:max_wait])
+			t.join()
 		}
 	end
 
 	def close_all_windows
 		open_windows = get_open_windows()
 
-		# load config
-		# with custom close command
-
 		# gently close windows
-		puts "Closing"
 		close_windows_and_wait(open_windows) do |win|
 			# run custom close command here
-			puts "Closing #{win.pid} #{win.app_name}"
 			win.close
 		end
 
 		# kill remaining windows
-		if @options[:force]
-			puts "Killing"
-			close_windows_and_wait(open_windows) do |win|
-				puts "Killing #{win.pid} #{win.app_name}"
-				win.kill
-			end
+		close_windows_and_wait(open_windows) do |win|
+			win.kill if win.force || @options[:force]
 		end
 
 		if all_windows_closed?(open_windows)

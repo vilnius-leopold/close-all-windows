@@ -10,7 +10,9 @@ all:
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	mkdir -p $(DESTDIR)$(PREFIX)/share/close-all-windows
 	install -pm 755 close-all-windows $(DESTDIR)$(PREFIX)/bin
+	install -pm 755 close-all-windows.conf $(DESTDIR)$(PREFIX)/share/close-all-windows
 
 clean: clean-build
 	rm -rf $(DIST_DIR)/
@@ -40,6 +42,9 @@ archlinux-package: archlinux-build
 # move files to dist folder
 	mkdir -p $(DIST_DIR)
 	cp $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
+
+archlinux-package-and-install: archlinux-package
+	sudo pacman -U build/*.pkg.tar.xz
 
 archlinux-publish: archlinux-package
 # tag and push commit to github (ensure clean workspace)

@@ -1,3 +1,9 @@
+## v0.0.3
+- add config for window customizations
+- Fix bug with wrong/turncated process_name
+- Add process_command field
+- clean up stdout and add `--verbose` flag for debugging
+
 ## v0.0.2
 - rearchitecture entire script
 - remove run callback command. Instead use `close-all-windows && run-my-script`

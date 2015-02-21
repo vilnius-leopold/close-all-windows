@@ -24,6 +24,13 @@ close-all-windows --help
 close-all-windows && shutdown -h now
 ```
 
+### Config file
+The config file allows you to customize the close behaviour and cover edge cases. View [close-all-windows.conf](close-all-windows.conf) for more informations.
+
+Copy [close-all-windows.conf](close-all-windows.conf) to `~/.config/close-all-windows/` directory to use it.
+
+If installed via package, a sample config file is install under `/usr/share/close-all-windows/`.
+
 ### GUI
 [close-all-windows-dialog](https://github.com/vilnius-leopold/close-all-windows-dialog) is a very simple GUI front-end for this script.
 
@@ -40,11 +47,16 @@ Super user permission are required for the following steps (`sudo` or `su`).
 - make the script executable `chmod +x /usr/bin/close-all-windows`
 
 ## ToDo
-- Alternative close commands hooks for matching window
+- Improve edge case coverage
+- gem package
+- use `xev` (or c native xlib) for (close) event handling
+- try bamf for window/app discovery
+- try indicator-appmenu/{gtk,qt}-appmenu for triggering menu actions
 
 ## Issues
 - Some windows are not (yet) recognized, e.g. the steam client
 - Some windows won't close entirely but only go into the background e.g. skype
+- Some window managers (e.g. i3-wm) don't react to `wmctrl -c`
 
 ## Feature requests
 So the tool works perfectly for my use case. But possibly you'll need something extra.
