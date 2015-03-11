@@ -121,7 +121,7 @@ module ConfParser
 end
 
 class X11Window
-	attr_reader :id, :process_name, :app_name, :pid, :title
+	attr_reader :id, :process_name, :app_name, :pid, :title, :force
 
 	def initialize(options)
 		options.each { |k,v| instance_variable_set("@#{k}", v) }
@@ -394,6 +394,7 @@ class X11WindowCloser
 				:pid             => pid,
 				:title           => title,
 				:poll_interval   => @options[:poll_interval],
+				:force           => @options[:force],
 				:max_wait        => @options[:max_wait],
 				:close_command   => 'wmctrl -ic $WINDOW_ID'
 			}
@@ -404,6 +405,8 @@ class X11WindowCloser
 
 			windows << X11Window.new(window_options)
 		end
+
+		puts_debug "WINDOWS:", windows.inspect
 
 		return windows
 	end
@@ -460,10 +463,12 @@ class X11WindowCloser
 		end
 
 		if all_windows_closed?(open_windows)
+			puts_debug "Exit status 0"
 			exit(0)
 		end
 
 		warn "Closing all windows failed."
+		puts_debug "Exit status 1"
 		exit(1)
 	end
 end
