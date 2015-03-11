@@ -1,3 +1,7 @@
+## v0.0.4
+- fix force option bug that caused close-all-windows to return non zero exit status
+- add some more debug info
+
 ## v0.0.3
 - add config for window customizations
 - Fix bug with wrong/turncated process_name
