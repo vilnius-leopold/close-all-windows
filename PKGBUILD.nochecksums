@@ -1,5 +1,5 @@
 pkgname='close-all-windows'
-pkgver=0.0.3
+pkgver=0.0.4
 pkgrel=1
 pkgdesc="Gracefully close all X11 windows."
 arch=('any')
