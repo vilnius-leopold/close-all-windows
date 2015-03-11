@@ -44,7 +44,7 @@ archlinux-package: archlinux-build
 	cp $(BUILD_DIR)/*.tar.gz $(DIST_DIR)/
 
 archlinux-package-and-install: archlinux-package
-	sudo pacman -U build/*.pkg.tar.xz
+	echo -e "\n" | sudo pacman -U build/*.pkg.tar.xz
 
 archlinux-publish: archlinux-package
 # tag and push commit to github (ensure clean workspace)
