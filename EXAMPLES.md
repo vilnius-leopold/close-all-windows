@@ -11,6 +11,11 @@ close-all-windows --except $(ps -f -p $$ -o ppid=)
 close-all-windows && shutdown -h now
 ```
 
+## Writing debug information to a log file
+```
+close-all-windows --verbose &>> close-all-windows.log
+```
+
 ### Run steam
 ```bash
 # plain usage
