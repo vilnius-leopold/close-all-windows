@@ -1,3 +1,6 @@
+## v0.0.5
+- add --except-process CLI option
+
 ## v0.0.4
 - fix force option bug that caused close-all-windows to return non zero exit status
 - add some more debug info

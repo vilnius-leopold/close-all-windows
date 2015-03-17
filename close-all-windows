@@ -246,6 +246,12 @@ class X11WindowCloser
 				@options[:except] = pids.map{|pid| pid.to_i}
 			end
 
+			opts.on("--except-process [x,y,z]", Array, "Exclude windows from being closed.",
+			                                   "Comma separated list of process names.\n\n"
+			) do |process_names|
+				@options[:except_process] = process_names
+			end
+
 			opts.on("--help", "Print help text.") do |pids|
 				puts opts
 				abort
@@ -380,6 +386,8 @@ class X11WindowCloser
 				process_name_regex = Regexp.new(pattern)
 				process_name       = process_name_regex.match(process_command)[1]
 			end
+
+			next if @options[:except_process] && @options[:except_process].include?(process_name)
 
 			if process_name != ''
 				desktop_file = "/usr/share/applications/#{process_name}.desktop"
