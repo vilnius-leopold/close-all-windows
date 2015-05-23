@@ -1,11 +1,5 @@
 ## Examples:
 
-### Use with Ubuntu unity and compiz
-To prevent compiz from closing and thus exiting unity.
-```bash
-close-all-windows --except-process compiz
-```
-
 ### Running from terminal
 Close all windows execpt the terminal the script is running on:
 ```bash
