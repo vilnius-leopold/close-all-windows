@@ -51,6 +51,11 @@ archlinux-package-and-install: archlinux-package
 	echo -e "\n" | sudo pacman -U build/*.pkg.tar.xz
 
 archlinux-publish: archlinux-package
+
+install-and-test:
+	gnome-terminal -x sh -c "echo 'Installing close-all-windows'; sudo -E make PREFIX=/usr install && close-all-windows --simulate --verbose; sleep 100"
+
+
 # tag and push commit to github (ensure clean workspace)
 # create Source *-source.tar.gz archive
 # generate md5sum of source tar.gz archive and write to PKGBUILD
