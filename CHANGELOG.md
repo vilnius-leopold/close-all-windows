@@ -1,5 +1,13 @@
 ## v0.0.5
-- add --except-process CLI option
+- fix crash in case of missing config file
+- fix --help output
+- add --version option
+- remove sample config in /usr/share
+- instead add default config to /etc
+- add close setting to config to not close specific applications
+- add --except-process CLI option (equal to close: false in config)
+- ignore plank and compiz in config
+- add desktop file
 
 ## v0.0.4
 - fix force option bug that caused close-all-windows to return non zero exit status
