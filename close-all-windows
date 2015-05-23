@@ -10,6 +10,7 @@ module ConfParser
 
 	PARSERS = {
 		:force         => ->(value){ value == 'true' },
+		:close         => ->(value){ value == 'true' },
 		:poll_interval => ->(value){ value.to_f },
 		:max_wait      => ->(value){ value.to_i }
 	}
@@ -411,14 +412,20 @@ class X11WindowCloser
 				:poll_interval   => @options[:poll_interval],
 				:force           => @options[:force],
 				:max_wait        => @options[:max_wait],
-				:close_command   => 'wmctrl -ic $WINDOW_ID'
+				:close_command   => 'wmctrl -ic $WINDOW_ID',
+				:close           => true
 			}
 
 			window_options = merge_config_options(window_options)
 
+			puts_debug "\n WINDOW OPTIONS \n"
 			puts_debug window_options
 
-			windows << X11Window.new(window_options)
+			if window_options[:close]
+				windows << X11Window.new(window_options)
+			else
+				puts_debug "Config: won't close '#{window_options[:process_name]}'"
+			end
 		end
 
 		puts_debug "WINDOWS:", windows.inspect
