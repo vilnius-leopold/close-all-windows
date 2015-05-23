@@ -27,9 +27,10 @@ close-all-windows && shutdown -h now
 ### Config file
 The config file allows you to customize the close behaviour and cover edge cases. View [close-all-windows.conf](close-all-windows.conf) for more informations.
 
-Copy [close-all-windows.conf](close-all-windows.conf) to `~/.config/close-all-windows/` directory to use it.
+A default config file will be install under `/etc/close-all-windows.conf` if installed via package oder manually via make.
 
-If installed via package, a sample config file is install under `/usr/share/close-all-windows/`.
+If you want to make changes to the config, first copy it to `~/.config/close-all-windows/close-all-windows.conf` and edit it there.
+
 
 ### GUI
 [close-all-windows-dialog](https://github.com/vilnius-leopold/close-all-windows-dialog) is a very simple GUI front-end for this script.
@@ -43,19 +44,15 @@ Super user permission are required for the following steps (`sudo` or `su`).
 - install `ruby` and `wmctrl`
 	- Ubuntu: `apt-get install ruby wmctrl`
 	- Arch: `pacman -S ruby wmctrl`
-- copy script into your executable directory `cp close-all-windows /usr/bin/close-all-windows`
-- make the script executable `chmod +x /usr/bin/close-all-windows`
+- download tar source package and unpack
+- inside unpacked source directory run `make PREFIX=/usr install`
 
 ## ToDo
-- Improve edge case coverage
-- gem package
-- use `xev` (or c native xlib) for (close) event handling
-- try bamf for window/app discovery
-- try indicator-appmenu/{gtk,qt}-appmenu for triggering menu actions
+[TODO List](TODO.md)
 
 ## Issues
 - Some windows are not (yet) recognized, e.g. the steam client
-- Some windows won't close entirely but only go into the background e.g. skype
+- Some windows won't close entirely but only go into the background e.g. skype (see config file for work around)
 - Some window managers (e.g. i3-wm) don't react to `wmctrl -c`
 
 ## Feature requests

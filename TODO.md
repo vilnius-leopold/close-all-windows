@@ -6,5 +6,9 @@
 - [ ] ubuntu dock issue blinking icon / running application --> indicate stop (dBus?)
 - [ ] decent ruby package
 - [ ] tests
+- [ ] Improve edge case coverage
+- [ ] use `xev` (or c native xlib) for (close) event handling
+- [ ] try bamf for window/app discovery
+- [ ] try indicator-appmenu/{gtk,qt}-appmenu for triggering menu actions
 - [x] except syntax in config
 - [x] breaks when missing conf file in ~/.config/close-all-windows/ --> deal with missing conf file or conf file in /etc/close-all-windows.conf
