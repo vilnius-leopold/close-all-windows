@@ -10,9 +10,13 @@ all:
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	mkdir -p $(DESTDIR)$(PREFIX)/share/close-all-windows
 	install -pm 755 close-all-windows $(DESTDIR)$(PREFIX)/bin
-	install -pm 755 close-all-windows.conf $(DESTDIR)$(PREFIX)/share/close-all-windows
+
+	mkdir -p $(DESTDIR)/etc
+	install -pm 755 close-all-windows.conf $(DESTDIR)/etc
+
+	mkdir -p $(DESTDIR)$(PREFIX)/share/applications
+	install -pm 755 close-all-windows.desktop $(DESTDIR)$(PREFIX)/share/applications
 
 clean: clean-build
 	rm -rf $(DIST_DIR)/
