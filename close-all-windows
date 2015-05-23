@@ -234,11 +234,11 @@ class X11WindowCloser
 				@options[:poll_interval] = seconds
 			end
 
-			opts.on("--verbose", "Print debug information.") do
+			opts.on("--verbose", "Print debug information.\n\n") do
 				@options[:verbose] = true
 			end
 
-			opts.on("--use-config path", String, "Path to config file.") do |path|
+			opts.on("--use-config path", String, "Path to config file.\n\n") do |path|
 				@options[:use_config] = path
 			end
 
@@ -254,7 +254,7 @@ class X11WindowCloser
 				@options[:except_process] = process_names
 			end
 
-			opts.on("--help", "Print help text.") do |pids|
+			opts.on("--help", "Print help text.\n\n") do |pids|
 				puts opts
 				abort
 			end
@@ -267,9 +267,9 @@ class X11WindowCloser
 
 		begin
 			opt_parser.order!(ARGV)
-		rescue Exception => e
-			puts_debug "PARSE ERROR", e
-			abort("Invalid commandline options!")
+		rescue OptionParser::ParseError => e
+			puts "Invalid commandline options!"
+			exit(1)
 		end
 	end
 
