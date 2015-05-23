@@ -275,7 +275,10 @@ class X11WindowCloser
 	end
 
 	def load_config_options()
-		config_options = nil
+		config_options = {
+			:global  => {},
+			:targets => {}
+		}
 
 		local_conf_path     = ENV['HOME'] + '/.config/close-all-windows/close-all-windows.conf'
 		alt_local_conf_path = ENV['HOME'] + '~/.close-all-windows.conf'
@@ -291,11 +294,17 @@ class X11WindowCloser
 			alt_local_conf ||
 			system_conf
 
-		begin
-			config_options = ConfParser.parse_file(conf_path) if conf_path
-		rescue Exception => e
-			puts_debug("PARSE ERROR:", e)
-			abort("Failed to parse config file at:\n #{conf_path}")
+		if conf_path
+			puts_debug "Using config file at '#{conf_path}'"
+
+			begin
+				config_options = ConfParser.parse_file(conf_path) if conf_path
+			rescue Exception => e
+				puts_debug("PARSE ERROR:", e)
+				abort("Failed to parse config file at:\n #{conf_path}")
+			end
+		else
+			warn "WARN: Missing config file!"
 		end
 
 		return config_options
