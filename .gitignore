@@ -1,4 +1,6 @@
-
+# build and dist directory
+build/
+dist/
 
 # editor files
 *~
