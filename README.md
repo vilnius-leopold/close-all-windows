@@ -39,12 +39,12 @@ If you want to make changes to the config, first copy it to `~/.config/close-all
 - [ArchLinux AUR](https://aur.archlinux.org/packages/close-all-windows/)
 
 ## Manual install
-Super user permission are required for the following steps (`sudo` or `su`).
+Super user permission might be required for the following steps (`sudo` or `su`).
 
 - install `ruby` and `wmctrl`
 	- Ubuntu: `apt-get install ruby wmctrl`
 	- Arch: `pacman -S ruby wmctrl`
-- download tar source package and unpack
+- download and unpack source package
 - inside unpacked source directory run `make PREFIX=/usr install`
 
 ## ToDo

@@ -1,6 +1,6 @@
-### Issues
+### ToDo / Features / Issues
 - [ ] on max wait expire --> ask dialog to force quit (but still wait in background, if exit, then close force quite dialog aswell)
-- else notify fail
+- [ ] else notify fail
 - [ ] package for ubuntu
 - [ ] package with desktop file
 - [ ] ubuntu dock issue blinking icon / running application --> indicate stop (dBus?)
