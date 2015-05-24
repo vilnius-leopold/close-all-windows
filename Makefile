@@ -76,13 +76,19 @@ debian-build: source-package clean-build
 	cd $(BUILD_DIR); tar xf $(DEBIAN_SOURCE_ARCHIVE)
 	cp -r debian $(BUILD_DIR)/$(NAME)/debian
 
+
+
 debian-package: debian-build
 	cd $(BUILD_DIR)/$(NAME); debuild -us -uc
 	cd $(BUILD_DIR)/$(NAME); debsign
 	cp $(BUILD_DIR)/$(NAME)_*_all.deb $(DIST_DIR)/
 
-ubuntu-publish: debian-package
-	cd $(BUILD_DIR)/$(NAME); dput ppa:vilnius-leopold/close-all-windows/*.changes
+
+debian-signed-source-package: debian-build
+	cd $(BUILD_DIR)/$(NAME); debuild -S
+
+ubuntu-publish: debian-signed-source-package
+	cd $(BUILD_DIR); dput ppa:vilnius-leopold/close-all-windows close-all-windows_*_source.changes
 # tag and push commit to github (ensure clean workspace)
 # create Source *-source.tar.gz archive
 # generate md5sum of source tar.gz archive and write to PKGBUILD
