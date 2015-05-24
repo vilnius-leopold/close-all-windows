@@ -3,11 +3,14 @@
 require 'optparse'
 require 'ostruct'
 
+VERSION = '0.0.5'
+
 module ConfParser
 	DEBUG = false
 
 	PARSERS = {
 		:force         => ->(value){ value == 'true' },
+		:close         => ->(value){ value == 'true' },
 		:poll_interval => ->(value){ value.to_f },
 		:max_wait      => ->(value){ value.to_i }
 	}
@@ -232,11 +235,11 @@ class X11WindowCloser
 				@options[:poll_interval] = seconds
 			end
 
-			opts.on("--verbose", "Print debug information.") do
+			opts.on("--verbose", "Print debug information.\n\n") do
 				@options[:verbose] = true
 			end
 
-			opts.on("--use-config path", String, "Path to config file.") do |path|
+			opts.on("--use-config path", String, "Path to config file.\n\n") do |path|
 				@options[:use_config] = path
 			end
 
@@ -246,22 +249,36 @@ class X11WindowCloser
 				@options[:except] = pids.map{|pid| pid.to_i}
 			end
 
-			opts.on("--help", "Print help text.") do |pids|
+			opts.on("--except-process [x,y,z]", Array, "Exclude windows from being closed.",
+			                                   "Comma separated list of process names.\n\n"
+			) do |process_names|
+				@options[:except_process] = process_names
+			end
+
+			opts.on("--help", "Print help text.\n\n") do |pids|
 				puts opts
+				abort
+			end
+
+			opts.on("--version", "Print version number.") do |pids|
+				puts VERSION
 				abort
 			end
 		end
 
 		begin
 			opt_parser.order!(ARGV)
-		rescue Exception => e
-			puts_debug "PARSE ERROR", e
-			abort("Invalid commandline options!")
+		rescue OptionParser::ParseError => e
+			puts "Invalid commandline options!"
+			exit(1)
 		end
 	end
 
 	def load_config_options()
-		config_options = nil
+		config_options = {
+			:global  => {},
+			:targets => {}
+		}
 
 		local_conf_path     = ENV['HOME'] + '/.config/close-all-windows/close-all-windows.conf'
 		alt_local_conf_path = ENV['HOME'] + '~/.close-all-windows.conf'
@@ -277,11 +294,17 @@ class X11WindowCloser
 			alt_local_conf ||
 			system_conf
 
-		begin
-			config_options = ConfParser.parse_file(conf_path) if conf_path
-		rescue Exception => e
-			puts_debug("PARSE ERROR:", e)
-			abort("Failed to parse config file at:\n #{conf_path}")
+		if conf_path
+			puts_debug "Using config file at '#{conf_path}'"
+
+			begin
+				config_options = ConfParser.parse_file(conf_path) if conf_path
+			rescue Exception => e
+				puts_debug("PARSE ERROR:", e)
+				abort("Failed to parse config file at:\n #{conf_path}")
+			end
+		else
+			warn "WARN: Missing config file!"
 		end
 
 		return config_options
@@ -381,6 +404,8 @@ class X11WindowCloser
 				process_name       = process_name_regex.match(process_command)[1]
 			end
 
+			next if @options[:except_process] && @options[:except_process].include?(process_name)
+
 			if process_name != ''
 				desktop_file = "/usr/share/applications/#{process_name}.desktop"
 				app_name     = `cat #{desktop_file} | grep Name= | head -n 1 | cut -d= -f 2`.strip if File.exists?(desktop_file)
@@ -396,14 +421,20 @@ class X11WindowCloser
 				:poll_interval   => @options[:poll_interval],
 				:force           => @options[:force],
 				:max_wait        => @options[:max_wait],
-				:close_command   => 'wmctrl -ic $WINDOW_ID'
+				:close_command   => 'wmctrl -ic $WINDOW_ID',
+				:close           => true
 			}
 
 			window_options = merge_config_options(window_options)
 
+			puts_debug "\n WINDOW OPTIONS \n"
 			puts_debug window_options
 
-			windows << X11Window.new(window_options)
+			if window_options[:close]
+				windows << X11Window.new(window_options)
+			else
+				puts_debug "Config: won't close '#{window_options[:process_name]}'"
+			end
 		end
 
 		puts_debug "WINDOWS:", windows.inspect

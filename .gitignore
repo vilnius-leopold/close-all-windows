@@ -1,0 +1,8 @@
+# build and dist directory
+build/
+dist/
+
+# editor files
+*~
+*.sublime-project
+*.sublime-workspace

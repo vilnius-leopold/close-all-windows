@@ -1,0 +1,5 @@
+close-all-windows (0.0.5-1) vivid; urgency=medium
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Leopold Burdyl <leopold.burdyl@gmail.com>  Sun, 24 May 2015 00:17:46 +0300

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Close All Windows
+Comment=Closes all open application windows
+Exec=close-all-windows
+Icon=window-close
+Terminal=false
+Type=Application
+Categories=System;

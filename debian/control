@@ -1,0 +1,14 @@
+Source: close-all-windows
+Maintainer: Leopold Burdyl <leopold.burdyl@gmail.com>
+Homepage: https://github.com/vilnius-leopold/close-all-windows
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+
+Package: close-all-windows
+Version: 0.0.5-1
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby, wmctrl
+Description: closes all windows
+ closes all open application windows with one click.

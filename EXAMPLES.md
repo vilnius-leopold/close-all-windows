@@ -1,4 +1,5 @@
 ## Examples:
+
 ### Running from terminal
 Close all windows execpt the terminal the script is running on:
 ```bash
