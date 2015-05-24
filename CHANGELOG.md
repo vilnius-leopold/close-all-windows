@@ -1,4 +1,5 @@
 ## v0.0.5
+- add ubuntu ppa
 - fix crash in case of missing config file
 - fix --help output
 - add --version option

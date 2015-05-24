@@ -37,6 +37,7 @@ If you want to make changes to the config, first copy it to `~/.config/close-all
 
 ## Install from Repository
 - [ArchLinux AUR](https://aur.archlinux.org/packages/close-all-windows/)
+- [Ubuntu ppa](https://launchpad.net/~vilnius-leopold/+archive/ubuntu/close-all-windows)
 
 ## Manual install
 Super user permission might be required for the following steps (`sudo` or `su`).
