@@ -7,9 +7,12 @@ Gracfully (no force) closes all open [X11](http://www.x.org/) windows.
 
 ## Usage
 
-_NOTE_: The script will not execute successfully if you run it from within a window application e.g. a terminal window, because the window running the script will be closed by the script, thus interrupting the script. Run this script from within your window manager or in a background process.
+### Desktop Application
+`close-all-windows` ships as a discoverable desktop application (`clos-all-windows.desktop` file installed in `/usr/share/applications`). Adding it to your dock or application menu enables you to close all windows with one click.
 
 ### CLI
+_NOTE_: The script will not execute successfully if you run it from within a window application e.g. a terminal window, because the window running the script will be closed by the script, thus interrupting the script. Run this script from within your window manager or in a background process.
+
 ```bash
 # plain usage
 close-all-windows
